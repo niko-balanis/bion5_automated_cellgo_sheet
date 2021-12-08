@@ -23,15 +23,18 @@ def main():
         st.sidebar.subheader(
             "This app is for creating the sheets used by the MLprep to carry"
             " out transfers from a source to target plate to create"
-            " Cellgorithms.     It takes two input csv files (not xlsx!!!) one"
-            " that has the name and well location of your proguides  (source) ,"
-            " and another that     lists the genes, the concomitant proguide,"
-            " and the steps at which the proguide will be used . It then"
-            " creates all permutations of one proguide     per step. And based"
-            " on the mapping in the key file. It then builds the MLprep"
-            " automation sheet. Additionally information on the limiting    "
-            " proguides is last_index_for_melted_dataframes in the output log"
-            " file."
+            " Cellgorithms.     It takes two input CSV files (not xlsx!). The"
+            " first is the key file it is 3 columns. It lists the targets in"
+            " column 1 (usually a gene),  the concomitant proguide id in column"
+            " 2, and the step it is used at in column 3  The second file the"
+            " source sheet is 2 columns it has the proguide id in the first"
+            " columnand the location, i.e. the well in the source plate in the"
+            " second column The program the then creates all permutations of"
+            " one proguide per step based on all the proguides in the key file "
+            " It then builds the MLprep automation sheet to build those"
+            " cellgorithms using the mapping in the source file. Additionally"
+            " information on the limiting proguides  and other metrics are in a"
+            " separate file included upon download of result."
         )
 
         col1, col2, col3 = st.columns(3)
@@ -218,18 +221,20 @@ def main():
         with col2:
             st.write(example_key)
             st.caption(
-                "This is an example key file tab separated text file (not"
-                " xlsx!). Each row is a cellgorithm, each column is a step."
-                " Each element has the pgp id's that are activated at that step"
-                " in that cellgorithm, you can put more than one pgp id in a"
-                " element by using commas as seen in the example"
+                "This is an example key file. It is a TAB separated text file"
+                " (not xlsx!). Each row contains one cellgorithm, each column"
+                " corresponds to a single step. Each element in the matrix has"
+                " the proguide id's that are activated at that step (column) in"
+                " that specifc cellgorithm (row), you can put more than one pgp"
+                " id in a element by using commas. You can have cellgorithms of"
+                " different lengths.See the example key file."
             )
         with col3:
             st.write(example_source)
             st.caption(
-                "This is an example source sheet csv. This lists the target"
-                " name (gene)  in the first column, the proguide id in the"
-                " second, and the well in source plate in the third."
+                "This is an example source sheet CSV file. This lists the"
+                " target name (gene)  in the first column, the proguide id in"
+                " the second, and the well in source plate in the third."
             )
         uploaded_key = st.file_uploader(
             "Choose a key file",
