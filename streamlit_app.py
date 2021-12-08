@@ -48,8 +48,8 @@ def main():
             st.write(example_key)
             st.caption(
                 "This is an example key file csv. The first column is the gene"
-                " target name, the sedond is the pgp and the third is what step"
-                " you would like it used at"
+                " target name, the second is the proguide id and the third is"
+                " what step you would like it used at."
             )
         with col3:
             st.write(example_source)
@@ -218,10 +218,11 @@ def main():
         with col2:
             st.write(example_key)
             st.caption(
-                "This is an example key file csv. Each row is a cellgorithm,"
-                " each column is a step Each cell is the pgps activated at that"
-                " step in that cellgorith, you can put more than in a cell by"
-                " using commas"
+                "This is an example key file tab separated text file (not"
+                " xlsx!). Each row is a cellgorithm, each column is a step."
+                " Each element has the pgp id's that are activated at that step"
+                " in that cellgorithm, you can put more than one pgp id in a"
+                " element by using commas as seen in the example"
             )
         with col3:
             st.write(example_source)
