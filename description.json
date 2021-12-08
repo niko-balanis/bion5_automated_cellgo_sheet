@@ -1,0 +1,14 @@
+{
+  "project_name": "bion5_automated_cellgo_sheet",
+  "project_slug": "bion5_automated_cellgo_sheet",
+  "author": "Nikolas Balanis",
+  "email": "niko@cellgorithm.com",
+  "date": "12/04/2021",
+  "project_short_description": "short description of project",
+  "jira_project_name": "BION-5_automated_cellgo_sheet",
+  "jira_project_link": "https://cellgorithm.atlassian.net/jira/software/projects/BIOIN/boards/2?selectedIssue=BIOIN-5",
+  "aws_s3_uri_link": "s3://cellgo/projects/bion5_automated_cellgo_sheet/",
+  "confluence_links": "link1,link2,...",
+  "version_control_repo_link": "link to gitlab,github,or bitbucket here",
+  "other_links": "link1,link2,...",
+}
