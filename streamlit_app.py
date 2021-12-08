@@ -1,8 +1,9 @@
 import streamlit as st
+from streamlit import caching
 import pandas as pd
 import itertools
 import logging
-import zipfile
+from zipfile import ZipFile
 
 # from streamlit.elements.utils import last_index_for_melted_dataframes
 
@@ -75,6 +76,13 @@ def main():
         if (uploaded_key is not None) & (uploaded_source is not None):
             key = pd.read_csv(uploaded_key, header=0, quoting=3)
             source = pd.read_csv(uploaded_source, header=0, quoting=3)
+            col4, col5 = st.columns(2)
+            with col4:
+                st.write(key)
+                st.caption("Your key file")
+            with col5:
+                st.write(source)
+                st.caption("Your source file")
             st.write(key)
             st.write(source)
             # number of unique steps
@@ -142,8 +150,9 @@ def main():
                 .values.tolist()
             )
             df["SourceWell"] = source.well[idx].tolist()
-            df.to_csv("output.txt", sep=",", index=False, quoting=None)
+            df.to_csv("combo_output.csv", sep=",", index=False, quoting=None)
             st.write(df)
+            st.subheader("Output automation sheet")
             pgp_table = df.pgp.value_counts()
             pgp_max = pgp_table.max()
             pgp_min = pgp_table.min()
@@ -161,18 +170,34 @@ def main():
                 f" {pgp_min} transfers and {4*pgp_min} ul"
                 " minimum in the source plate"
             )
+            zipobj = ZipFile("combo_cellgo.zip", "w")
+            zipobj.write("combo_output.csv")
+            zipobj.write("cellgo_stats.txt")
+            zipobj.close()
+            with open("combo_cellgo.zip", "rb") as myzip:
+                st.download_button(
+                    label="Press to download MLprep automation sheet",
+                    data=myzip,
+                    file_name="combo_cellgo.zip",
+                    mime="application/zip",
+                    key="download-automation-sheet",
+                )
 
     if option == "Input: Manual cellgo construction sheet":
         st.sidebar.subheader(
             "This app is for creating the sheets used by the MLprep to carry"
             " out transfers from a source to target plate to create"
-            " Cellgorithms. It takes two input csv files (not xlsx!!!) the"
-            " source file that has the target name/gene name, the proguide id ,"
-            " well location in the source plate, and another the key file that"
-            " has one cellgorithm per row and each column represents a"
-            " different step. It then builds the MLprep automation sheet."
-            " Additionally information on the limiting     proguides is"
-            " last_index_for_melted_dataframes in the output log file."
+            " cellgorithms. It takes two input files (neither is an xlsx!). The"
+            " key file is a tab separated text file that has one cellgorithm"
+            " per row where each column is a different step. Each element can"
+            " have one or more proguide ids representing the proguides"
+            " activated at that step( column) in that cellgorithm (row)."
+            " Multiple proguides at a step in a cellgorithm can be entered"
+            " separated by commas. source file that has the target name/gene"
+            " name, the proguide id , well location in the source plate, and"
+            " another  It then builds the MLprep automation sheet. Additionally"
+            " information on the limiting proguides and other metrics is"
+            " included in a separate .txt"
         )
         col1, col2, col3 = st.columns([1, 2, 1])
         with col1:
@@ -181,7 +206,11 @@ def main():
                 caption="MLprep robot",
             )
         example_key = pd.read_csv(
-            "data/manual_key_example.txt", sep="\t", header=0, quoting=3
+            "data/manual_key_example.txt",
+            sep="\t",
+            header=0,
+            quoting=3,
+            keep_default_na=False,
         )
         example_source = pd.read_csv(
             "data/source_sheet2.csv", header=0, quoting=3
@@ -207,7 +236,13 @@ def main():
         )
         uploaded_source = st.file_uploader("Choose a source file", type=["csv"])
         if (uploaded_key is not None) & (uploaded_source is not None):
-            key = pd.read_csv(uploaded_key, header=0, sep="\t", quoting=3)
+            key = pd.read_csv(
+                uploaded_key,
+                header=0,
+                sep="\t",
+                quoting=3,
+                keep_default_na=False,
+            )
             source = pd.read_csv(uploaded_source, header=0, quoting=3)
             col4, col5 = st.columns(2)
             with col4:
@@ -219,7 +254,12 @@ def main():
             key = key.applymap(lambda row: row.replace('"', ""))
             key = key.applymap(lambda row: row.replace(" ", ""))
             pgp_combos_pre = key.values.tolist()
-            pgp_combos = [tuple(x) for x in key.values.tolist()]
+            # remove empty elements i.e. if a row has less steps than other rows
+            pgp_combos_pre = [
+                [element for element in sublist if element != ""]
+                for sublist in pgp_combos_pre
+            ]
+            pgp_combos = [tuple(x) for x in pgp_combos_pre]
             pgp_flat_combos = [
                 proguide for sublist in pgp_combos for proguide in sublist
             ]
@@ -228,10 +268,10 @@ def main():
                 for sublist in pgp_flat_combos
                 for proguide in sublist.split(",")
             ]
-            target_combos = [tuple(x) for x in source.values.tolist()]
-            target_flat_combos = [
-                target for sublist in target_combos for target in sublist
-            ]
+            # target_combos = [tuple(x) for x in source.values.tolist()]
+            # target_flat_combos = [
+            #    target for sublist in target_combos for target in sublist
+            # ]
             max_steps = len((key.columns))
             num_pgps = len(set(pgp_flat_combos_split))
             num_cellgos = len(key.index)
@@ -286,7 +326,7 @@ def main():
             )
             df.to_csv("manual_output.csv", sep=",", index=False, quoting=None)
             st.write(df)
-            st.subheader("Your automation sheet")
+            st.subheader("Output automation sheet")
             pgp_table = df.pgp.value_counts()
             pgp_max = pgp_table.max()
             pgp_min = pgp_table.min()
@@ -301,7 +341,7 @@ def main():
                 filemode="w",
                 format="%(message)s",
                 datefmt="%H:%M:%S",
-                level=logging.DEBUG,
+                level=logging.INFO,
                 force=True,
             )
             logging.info(
@@ -328,18 +368,17 @@ def main():
                 " source plate"
             )
             zipobj = ZipFile("manual_cellgo.zip", "w")
-            zipobj.write("manual_output.csv", "w")
-            zipobj.write("cellgo_stats.txt", "w")
-            st.download_button(
-                label=(
-                    "Press to Download Manual Cellgorithm Construction"
-                    " automation sheet"
-                ),
-                data=df.to_csv(index=False, quoting=None),
-                file_name="manual_cellgo.zip",
-                mime="application/zip",
-                key="download-automation-sheet",
-            )
+            zipobj.write("manual_output.csv")
+            zipobj.write("cellgo_stats.txt")
+            zipobj.close()
+            with open("manual_cellgo.zip", "rb") as myzip:
+                st.download_button(
+                    label="Press to download MLprep automation sheet",
+                    data=myzip,
+                    file_name="manual_cellgo.zip",
+                    mime="application/zip",
+                    key="download-automation-sheet",
+                )
 
 
 if __name__ == "__main__":
