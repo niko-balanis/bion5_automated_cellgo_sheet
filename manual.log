@@ -1,7 +1,79 @@
-04:34:50,Max number of unique cellgorithm steps is 4
-04:34:50,Number of proguides used is 8
-04:34:50,Number of unique targets is 5
-04:34:50,Number of unique cellgos|unique TargetWells is 5
-04:34:50,Total number of pipets needed/robotic transfers is 29
-04:34:50,['PGP001', 'PGP002'] proguide(s) use the most material. Each proguide(s) requires 5 transfers and 20 ul minimum in the source plate (@ 4ul per transfer)
-04:34:50,['PGP007', 'PGP008'] proguide(s) use the least material require 2 transfers and 8 ul minimum in the source plate
+19:39:08,Max number of unique cellgorithm steps is 4
+19:39:08,Number of proguides used is 9
+19:39:08,Number of unique targets is 6
+19:39:08,Number of unique cellgos|unique TargetWells is 17
+19:39:08,Total number of pipets needed/robotic transfers is 125
+19:39:08,['PGP001', 'PGP002'] proguide(s) use the most material. Each proguide(s) requires 17 transfers and 68 ul minimum in the source plate (@ 4ul per transfer)
+19:39:08,['PGP011'] proguide(s) use the least material require 1 transfers and 4 ul minimum in the source plate
+23:36:40,Internal Python error in the inspect module.
+Below is the traceback from this internal error.
+
+23:36:40,
+Unfortunately, your original traceback can not be constructed.
+
+23:36:40,Internal Python error in the inspect module.
+Below is the traceback from this internal error.
+
+23:36:40,
+Unfortunately, your original traceback can not be constructed.
+
+23:36:40,Internal Python error in the inspect module.
+Below is the traceback from this internal error.
+
+23:36:40,
+Unfortunately, your original traceback can not be constructed.
+
+23:36:56,Internal Python error in the inspect module.
+Below is the traceback from this internal error.
+
+23:36:56,
+Unfortunately, your original traceback can not be constructed.
+
+23:36:56,Internal Python error in the inspect module.
+Below is the traceback from this internal error.
+
+23:36:56,
+Unfortunately, your original traceback can not be constructed.
+
+23:36:56,Internal Python error in the inspect module.
+Below is the traceback from this internal error.
+
+23:36:56,
+Unfortunately, your original traceback can not be constructed.
+
+23:37:24,Internal Python error in the inspect module.
+Below is the traceback from this internal error.
+
+23:37:24,
+Unfortunately, your original traceback can not be constructed.
+
+23:37:24,Internal Python error in the inspect module.
+Below is the traceback from this internal error.
+
+23:37:24,
+Unfortunately, your original traceback can not be constructed.
+
+23:37:24,Internal Python error in the inspect module.
+Below is the traceback from this internal error.
+
+23:37:24,
+Unfortunately, your original traceback can not be constructed.
+
+23:39:52,Internal Python error in the inspect module.
+Below is the traceback from this internal error.
+
+23:39:52,
+Unfortunately, your original traceback can not be constructed.
+
+23:39:52,Internal Python error in the inspect module.
+Below is the traceback from this internal error.
+
+23:39:52,
+Unfortunately, your original traceback can not be constructed.
+
+23:39:52,Internal Python error in the inspect module.
+Below is the traceback from this internal error.
+
+23:39:52,
+Unfortunately, your original traceback can not be constructed.
+
