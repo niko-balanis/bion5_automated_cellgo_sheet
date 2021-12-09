@@ -24,6 +24,9 @@ def common_member(a, b):
 def main():
     st.set_page_config(layout="wide")
     st.title("MLprep cellgo automation sheet construction app")
+    st.subheader(
+        "Spot check the output and email niko@cellgorithm.com if you find bugs!"
+    )
     option = st.selectbox(
         "Input Format",
         (
@@ -33,6 +36,9 @@ def main():
         ),
     )
     if option == "Input: Combinatorial cellgo construction sheet":
+        st.subheader(
+            "Builds cellgorithms combinatorially based on the key file."
+        )
         st.sidebar.subheader(
             "This app is for creating the sheets used by the MLprep to carry"
             " out transfers from a source to target plate to create"
@@ -46,8 +52,13 @@ def main():
             " one proguide per step based on all the proguides in the key file "
             " It then builds the MLprep automation sheet to build those"
             " cellgorithms using the mapping in the source file. Additionally"
-            " information on the limiting proguides  and other metrics are in a"
-            " separate file included upon download of result."
+            " information on the limiting proguides and other metrics are in a"
+            " separate file included upon download of result. If you try to"
+            " build too many cellgorithms and you exceed the positions or the"
+            " number of pipets that can physically fit in the machine the"
+            " program will let you know by throwing an error.It has some other"
+            " error checking for common mistakes, but do spot check your work"
+            " and email me at niko@cellgorithm.com if you find a bug."
         )
 
         col1, col2, col3 = st.columns(3)
@@ -56,8 +67,12 @@ def main():
                 "data/mlprep.png",
                 caption="MLprep robot",
             )
+            st.image(
+                "data/mlprep_plate_sites.jpg",
+                caption="MLprep plate sites",
+            )
         example_key = pd.read_csv(
-            "data/manual_key_example.csv", header=0, quoting=3
+            "data/combo_key_example.csv", header=0, quoting=3
         )
         example_source = pd.read_csv(
             "data/source_sheet_example.csv", header=0, quoting=3
@@ -65,16 +80,19 @@ def main():
         with col2:
             st.write(example_key)
             st.caption(
-                "This is an example key file csv. The first column is the gene"
-                " target name, the second is the proguide id and the third is"
-                " what step you would like it used at."
+                "Note: You must have these exact headers in your file! This is"
+                " an example key file it is a 2 column CSV (not xlsx!). The"
+                " first column is the proguide id, the second is the step it is"
+                " to be used at."
             )
         with col3:
             st.write(example_source)
             st.caption(
-                "This is an example source sheet csv. This lists the proguide"
-                " ids in the first column and the well in source plate in the"
-                " second."
+                "Note: You must have these exact headers! This is an example"
+                " source sheet file it is a 4 column CSV (not xlsx!). It lists"
+                " the target name (gene) in the first column, the proguide id"
+                " in the second, the well in source plate in the third, and the"
+                " source plate site in the 4th."
             )
         uploaded_key = st.file_uploader(
             "Choose a key file",
@@ -234,19 +252,17 @@ def main():
             min_pgp_list = pgp_table[pgp_table == pgp_min].index.tolist()
             pipets_needed = len(df.index)
 
-            with open("manual.log", "w"):
+            with open("cellgo_stats.txt", "w"):
                 pass
             logging.basicConfig(
-                filename="manual.log",
+                filename="cellgo_stats.txt",
                 filemode="w",
                 format="%(message)s",
                 datefmt="%H:%M:%S",
                 level=logging.INFO,
                 force=True,
             )
-            logging.info(
-                f"Max number of unique cellgorithm steps is {max_steps}"
-            )
+            logging.info(f"Number of unique cellgorithm steps is {num_steps}")
             logging.info(f"Number of proguides used is {num_pgps}")
             logging.info(f"Number of unique targets is {num_targets}")
             logging.info(
@@ -281,6 +297,10 @@ def main():
                 )
 
     if option == "Input: Manual cellgo construction sheet":
+        st.subheader(
+            "Builds cellgorithms manuallybased on the key file, 1 cellgorithm"
+            " for each row."
+        )
         st.sidebar.subheader(
             "This app is for creating the sheets used by the MLprep to carry"
             " out transfers from a source to target plate to create"
@@ -300,14 +320,21 @@ def main():
             " automation sheet. Additionally information on the limiting"
             " proguides and other metrics is included in a separate .txt. If"
             " you try to build too many cellgorithms and you exceed the"
-            " positions or the number of pipets that can physcially fit in the"
-            " machine the programwill let you know by throwing an error."
+            " positions or the number of pipets that can physically fit in the"
+            " machine the program will let you know by throwing an error. It"
+            " has some other error checking for common mistakes, but do spot"
+            " check your work and email me at niko@cellgorithm.com if you find"
+            " a bug."
         )
         col1, col2, col3 = st.columns([1, 2, 1])
         with col1:
             st.image(
                 "data/mlprep.png",
                 caption="MLprep robot",
+            )
+            st.image(
+                "data/mlprep_plate_sites.jpg",
+                caption="MLprep plate sites",
             )
         example_key = pd.read_csv(
             "data/manual_key_example.txt",
@@ -317,7 +344,7 @@ def main():
             keep_default_na=False,
         )
         example_source = pd.read_csv(
-            "data/source_sheet2.csv", header=0, quoting=3
+            "data/source_sheet_example.csv", header=0, quoting=3
         )
         with col2:
             st.write(example_key)
@@ -461,7 +488,7 @@ def main():
                     "pgp",
                 ]
             )
-            df["TargetSite"] = targetsite_rows
+            df["TargetSite"] = targetsites_rows
             df["TargetWell"] = well_rows
             df["pgp"] = pgp_flat_combos_split
             idx = (
