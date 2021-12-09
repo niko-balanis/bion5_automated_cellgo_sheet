@@ -4,8 +4,21 @@ import pandas as pd
 import itertools
 import logging
 from zipfile import ZipFile
+from math import ceil
+import sys
 
-# from streamlit.elements.utils import last_index_for_melted_dataframes
+sys.tracebacklimit = None
+
+# SO DUMB i should have merged the key and source as early as possible and done sanity checks on merged frame,
+# would have made a lot of this simpler. as is now if source plate has extra stuff you wont use then
+#  it may tell you you have too many plates. That check should happen after merging. --Niko
+def common_member(a, b):
+    a_set = set(a)
+    b_set = set(b)
+    if a_set & b_set:
+        return True
+    else:
+        return False
 
 
 def main():
@@ -43,9 +56,11 @@ def main():
                 "data/mlprep.png",
                 caption="MLprep robot",
             )
-        example_key = pd.read_csv("data/key.csv", header=0, quoting=3)
+        example_key = pd.read_csv(
+            "data/manual_key_example.csv", header=0, quoting=3
+        )
         example_source = pd.read_csv(
-            "data/source_sheet.csv", header=0, quoting=3
+            "data/source_sheet_example.csv", header=0, quoting=3
         )
         with col2:
             st.write(example_key)
@@ -77,6 +92,8 @@ def main():
             force=True,
         )
         if (uploaded_key is not None) & (uploaded_source is not None):
+            mlprep_sites = [1, 2, 3, 4, 5, 6, 7, 8]
+            plate_size = 96
             key = pd.read_csv(uploaded_key, header=0, quoting=3)
             source = pd.read_csv(uploaded_source, header=0, quoting=3)
             col4, col5 = st.columns(2)
@@ -86,16 +103,51 @@ def main():
             with col5:
                 st.write(source)
                 st.caption("Your source file")
-            st.write(key)
-            st.write(source)
+            all_contained = all(
+                elem in list(source.pgp) for elem in list(key.pgp)
+            )
+            if all_contained == False:
+                raise SystemExit(
+                    "You have pgp ids in your key file that dont exist in your"
+                    " source plate. Please fix."
+                )
+            key = pd.merge(
+                left=key,
+                right=source[["pgp", "target", "site"]],
+                how="left",
+                on="pgp",
+            )
+            source_sites = list(set(key.site))
+            num_sourcesites = len(source_sites)
+            mlprep_sites = [x for x in mlprep_sites if x not in source_sites]
+            if num_sourcesites > 2:
+                raise ValueError(
+                    "The software isnt designed to handle more than two sites"
+                    " in the MLprep for source plates."
+                )
+
             # number of unique steps
             num_steps = len(set(key.step))
-            num_targets = len(set(key.target))
             num_pgps = len(set(key.pgp))
+            num_targets = len(set(key.target))
             g = key.groupby(by="step")
             # list of lists with each sublist all the pgps that can possibly be used in that step
             pgp_steps = [list(group[1].pgp) for group in g]
             target_steps = [list(group[1].target) for group in g]
+            pgp_at_multiple_steps = any(
+                [
+                    common_member(x, y)
+                    for i, x in enumerate(pgp_steps)
+                    for j, y in enumerate(pgp_steps)
+                    if i != j
+                ]
+            )
+            if pgp_at_multiple_steps == True:
+                raise SystemExit(
+                    "You have pgp ids at multiple steps. Each pgp should exist"
+                    " at one and only one step. Please fix."
+                )
+
             # inner product
             pgp_combos = [p for p in itertools.product(*pgp_steps)]
             pgp_flat_combos = [
@@ -106,16 +158,48 @@ def main():
                 target for sublist in target_combos for target in sublist
             ]
             num_cellgos = len(pgp_combos)
-            logging.info(f"Number of unique cellgorithm steps is {num_steps}")
-            logging.info(f"Number of proguides used is {num_pgps}")
-            logging.info(f"Number of unique targets is {num_targets}")
-            logging.info(
-                f"Number of unique cellgos|unique TargetWells is {num_cellgos}"
+            # make 96 well representation as a list of 96 elements
+            wells = [
+                f"{letter}{i}"
+                for letter in ["A", "B", "C", "D", "E", "F", "G", "H"]
+                for i in range(1, 13)
+            ]
+            wells_cycle = list(
+                itertools.islice(itertools.cycle(wells), num_cellgos)
             )
-            logging.info(
-                "Total number of robotic transfers from source plate is"
-                f" {num_cellgos*num_steps}"
-            )
+            # as many wells in target plate as number of cellgos, for each well the number of rows is determined by the number
+            # of steps as that is how many transfers have to occur
+
+            well_rows = [
+                x
+                for item in wells_cycle
+                for x in itertools.repeat(item, num_steps)
+            ]
+            num_targetsites = ceil(len(wells_cycle) / plate_size)
+            num_pipetsites = ceil(len(well_rows) / plate_size)
+            if (num_sourcesites + num_targetsites + num_pipetsites) > 8:
+                raise SystemExit(
+                    "There are 8 total physical sites on the MLprep you can"
+                    " place plates. You are attempting to use"
+                    f" {num_sourcesites + num_targetsites  + num_pipetsites} sites."
+                    " Please lower the number of cellgorithms you are"
+                    " attempting to create to get below 8 total sites . #"
+                    " SourceSites you are attempting to use:"
+                    f" {num_sourcesites}. # TargetSites you are attempting to"
+                    f" use: {num_targetsites}. # PipetSites you are attempting"
+                    f" to use: {num_pipetsites}"
+                )
+            target_sites = mlprep_sites[:num_targetsites]
+            mlprep_sites = [x for x in mlprep_sites if x not in target_sites]
+            targetsites_sheet = [
+                item for item in target_sites for i in range(plate_size)
+            ]
+            targetsites_sheet = targetsites_sheet[: len(wells_cycle)]
+            targetsites_rows = [
+                x
+                for item in targetsites_sheet
+                for x in itertools.repeat(item, num_steps)
+            ]
 
             # make skeletong of automation sheet
             df = pd.DataFrame(
@@ -128,22 +212,8 @@ def main():
                     "target",
                 ]
             )
-            # make 96 well representation as a list of 96 elements
-            wells = [
-                f"{letter}{i}"
-                for letter in ["A", "B", "C", "D", "E", "F"]
-                for i in range(1, 13)
-            ]
-            # as many wells in target plate as number of cellgos, for each well the number of rows is determined by the number
-            # of steps as that is how many transfers have to occur
-            well_rows = [
-                x
-                for item in wells[0:num_cellgos]
-                for x in itertools.repeat(item, num_steps)
-            ]
             df["TargetWell"] = well_rows
-            df["TargetSite"] = 3
-            df["SourceSite"] = 1
+            df["TargetSite"] = targetsites_rows
             df["pgp"] = pgp_flat_combos
             df["target"] = target_flat_combos
             idx = (
@@ -153,6 +223,7 @@ def main():
                 .values.tolist()
             )
             df["SourceWell"] = source.well[idx].tolist()
+            df["SourceSite"] = source.site[idx].tolist()
             df.to_csv("combo_output.csv", sep=",", index=False, quoting=None)
             st.write(df)
             st.subheader("Output automation sheet")
@@ -161,17 +232,40 @@ def main():
             pgp_min = pgp_table.min()
             max_pgp_list = pgp_table[pgp_table == pgp_max].index.tolist()
             min_pgp_list = pgp_table[pgp_table == pgp_min].index.tolist()
+            pipets_needed = len(df.index)
 
+            with open("manual.log", "w"):
+                pass
+            logging.basicConfig(
+                filename="manual.log",
+                filemode="w",
+                format="%(message)s",
+                datefmt="%H:%M:%S",
+                level=logging.INFO,
+                force=True,
+            )
+            logging.info(
+                f"Max number of unique cellgorithm steps is {max_steps}"
+            )
+            logging.info(f"Number of proguides used is {num_pgps}")
+            logging.info(f"Number of unique targets is {num_targets}")
+            logging.info(
+                f"Number of unique cellgos|unique TargetWells is {num_cellgos}"
+            )
+            logging.info(
+                "Total number of pipets needed/robotic transfers is"
+                f" {pipets_needed}"
+            )
             logging.info(
                 f"{max_pgp_list} proguide(s) use the most material. Each"
                 f" proguide(s) requires {pgp_max} transfers and"
-                f" {4  * pgp_max} ul minimum in the source plate (@"
-                " 4ul per transfer)"
+                f" {4  * pgp_max} ul minimum in the source plate (@ 4ul per"
+                " transfer)"
             )
             logging.info(
                 f"{min_pgp_list} proguide(s) use the least material require"
-                f" {pgp_min} transfers and {4*pgp_min} ul"
-                " minimum in the source plate"
+                f" {pgp_min} transfers and {4 * pgp_min} ul minimum in the"
+                " source plate"
             )
             zipobj = ZipFile("combo_cellgo.zip", "w")
             zipobj.write("combo_output.csv")
@@ -196,11 +290,18 @@ def main():
             " have one or more proguide ids representing the proguides"
             " activated at that step( column) in that cellgorithm (row)."
             " Multiple proguides at a step in a cellgorithm can be entered"
-            " separated by commas. source file that has the target name/gene"
-            " name, the proguide id , well location in the source plate, and"
-            " another  It then builds the MLprep automation sheet. Additionally"
-            " information on the limiting proguides and other metrics is"
-            " included in a separate .txt"
+            " separated by commas. A source file that has the target name/gene"
+            " name in the first column , the proguide in the second column ,"
+            " the well (A1,B1..etc) in the source plate, and the source plate"
+            " site location (i.e. MLprep has 8 physical sites numbered 1"
+            " through 8 that a physical plate is placed). The program is"
+            " hardwired to accept up to a max of two sourceplate sites"
+            " (whatever 2 positions you want). It then builds the MLprep"
+            " automation sheet. Additionally information on the limiting"
+            " proguides and other metrics is included in a separate .txt. If"
+            " you try to build too many cellgorithms and you exceed the"
+            " positions or the number of pipets that can physcially fit in the"
+            " machine the programwill let you know by throwing an error."
         )
         col1, col2, col3 = st.columns([1, 2, 1])
         with col1:
@@ -221,20 +322,24 @@ def main():
         with col2:
             st.write(example_key)
             st.caption(
-                "This is an example key file. It is a TAB separated text file"
-                " (not xlsx!). Each row contains one cellgorithm, each column"
-                " corresponds to a single step. Each element in the matrix has"
-                " the proguide id's that are activated at that step (column) in"
-                " that specifc cellgorithm (row), you can put more than one pgp"
-                " id in a element by using commas. You can have cellgorithms of"
-                " different lengths.See the example key file."
+                "Note: You must have headers (use the format shown here)! This"
+                " is an example key file. It is a TAB separated text file of"
+                " however many columns you want (not xlsx!). Each row contains"
+                " one cellgorithm, each column corresponds to a single step."
+                " Each element in the matrix has the proguide id's that are"
+                " activated at that step (column) in that specifc cellgorithm"
+                " (row), you can put more than one pgp id in a element by using"
+                " commas. You can have cellgorithms of different lengths.See"
+                " the example key file."
             )
         with col3:
             st.write(example_source)
             st.caption(
-                "This is an example source sheet CSV file. This lists the"
-                " target name (gene)  in the first column, the proguide id in"
-                " the second, and the well in source plate in the third."
+                "Note: You must have these exact headers! This is an example"
+                " source sheet  file it is a 4 column CSV (not xlsx!). It lists"
+                " the target name (gene) in the first column, the proguide id"
+                " in the second, the well in source plate in the third, and the"
+                " source plate site in the 4th."
             )
         uploaded_key = st.file_uploader(
             "Choose a key file",
@@ -242,6 +347,8 @@ def main():
         )
         uploaded_source = st.file_uploader("Choose a source file", type=["csv"])
         if (uploaded_key is not None) & (uploaded_source is not None):
+            mlprep_sites = [1, 2, 3, 4, 5, 6, 7, 8]
+            plate_size = 96
             key = pd.read_csv(
                 uploaded_key,
                 header=0,
@@ -274,10 +381,14 @@ def main():
                 for sublist in pgp_flat_combos
                 for proguide in sublist.split(",")
             ]
-            # target_combos = [tuple(x) for x in source.values.tolist()]
-            # target_flat_combos = [
-            #    target for sublist in target_combos for target in sublist
-            # ]
+            source_sites = list(set(source.site))
+            num_sourcesites = len(source_sites)
+            if num_sourcesites > 2:
+                raise SystemExit(
+                    "You can't use more than two sites in the MLprep for source"
+                    " plates."
+                )
+            mlprep_sites = [x for x in mlprep_sites if x not in source_sites]
             max_steps = len((key.columns))
             num_pgps = len(set(pgp_flat_combos_split))
             num_cellgos = len(key.index)
@@ -294,19 +405,53 @@ def main():
             pgp_combos_fixed_lengths = [len(item) for item in pgp_combos_fixed]
             wells = [
                 f"{letter}{i}"
-                for letter in ["A", "B", "C", "D", "E", "F"]
+                for letter in ["A", "B", "C", "D", "E", "F", "G", "H"]
                 for i in range(1, 13)
             ]
+            wells_cycle = list(
+                itertools.islice(itertools.cycle(wells), num_cellgos)
+            )
             well_rows = list(
                 itertools.chain.from_iterable(
                     [
                         itertools.repeat(item, count)
                         for item, count in zip(
-                            wells[0:num_cellgos], pgp_combos_fixed_lengths
+                            wells_cycle, pgp_combos_fixed_lengths
                         )
                     ]
                 )
             )
+            num_targetsites = ceil(len(wells_cycle) / plate_size)
+            num_pipetsites = ceil(len(well_rows) / plate_size)
+            if (num_sourcesites + num_targetsites + num_pipetsites) > 8:
+                raise SystemExit(
+                    "There are 8 total physical sites on the MLprep you can"
+                    " place plates. You are attempting to use"
+                    f" {num_sourcesites + num_targetsites  + num_pipetsites} sites."
+                    " Please lower the number of cellgorithms you are"
+                    " attempting to create to get below 8 total sites . #"
+                    " SourceSites you are attempting to use:"
+                    f" {num_sourcesites}. # TargetSites you are attempting to"
+                    f" use: {num_targetsites}. # PipetSites you are attempting"
+                    f" to use: {num_pipetsites}"
+                )
+            target_sites = mlprep_sites[:num_targetsites]
+            mlprep_sites = [x for x in mlprep_sites if x not in target_sites]
+            targetsites_sheet = [
+                item for item in target_sites for i in range(plate_size)
+            ]
+            targetsites_sheet = targetsites_sheet[: len(wells_cycle)]
+            targetsites_rows = list(
+                itertools.chain.from_iterable(
+                    [
+                        itertools.repeat(item, count)
+                        for item, count in zip(
+                            targetsites_sheet, pgp_combos_fixed_lengths
+                        )
+                    ]
+                )
+            )
+
             df = pd.DataFrame(
                 columns=[
                     "SourceSite",
@@ -316,9 +461,8 @@ def main():
                     "pgp",
                 ]
             )
+            df["TargetSite"] = targetsite_rows
             df["TargetWell"] = well_rows
-            df["TargetSite"] = 3
-            df["SourceSite"] = 1
             df["pgp"] = pgp_flat_combos_split
             idx = (
                 source.reset_index()
@@ -326,6 +470,7 @@ def main():
                 .loc[df.pgp, "index"]
                 .values.tolist()
             )
+            df["SourceSite"] = source.site[idx].tolist()
             df["SourceWell"] = source.well[idx].tolist()
             df = pd.merge(
                 left=df, right=source[["pgp", "target"]], how="left", on="pgp"
