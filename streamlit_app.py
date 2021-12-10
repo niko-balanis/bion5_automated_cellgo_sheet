@@ -501,8 +501,36 @@ def main():
             min_pgp_list = pgp_table[pgp_table == pgp_min].index.tolist()
             num_targets = len(set(df.target))
             pipets_needed = len(df.index)
-            with open("cellgo_stats.txt", "w"):
-                pass
+
+            cellgostats = open("cellgo_stats.txt", "w")
+            cellgostats.write(
+                f"Max number of unique cellgorithm steps is {max_steps}\n"
+            )
+            cellgostats.write(f"Number of proguides used is {num_pgps}\n")
+            cellgostats.write(f"Number of unique targets is {num_targets}\n")
+            cellgostats.write(
+                "Number of unique cellgos|unique TargetWells is"
+                f" {num_cellgos}\n"
+            )
+            cellgostats.write(
+                "Total number of pipets needed/robotic transfers is"
+                f" {pipets_needed}\n"
+            )
+            cellgostats.write(
+                f"{max_pgp_list} proguide(s) use the most material. Each"
+                f" proguide(s) requires {pgp_max} transfers and"
+                f" {4  * pgp_max} ul minimum in the source plate (@ 4ul per"
+                " transfer)\n"
+            )
+            cellgostats.write(
+                f"{min_pgp_list} proguide(s) use the least material require"
+                f" {pgp_min} transfers and {4 * pgp_min} ul minimum in the"
+                " source plate\n"
+            )
+            cellgostats.close()
+            # with open("cellgo_stats.txt", "w"):
+            #    pass
+            """
             logging.basicConfig(
                 filename="cellgo_stats.txt",
                 filemode="w",
@@ -511,6 +539,7 @@ def main():
                 level=logging.INFO,
                 force=True,
             )
+        
             logging.info(
                 f"Max number of unique cellgorithm steps is {max_steps}"
             )
@@ -520,8 +549,7 @@ def main():
                 f"Number of unique cellgos|unique TargetWells is {num_cellgos}"
             )
             logging.info(
-                "Total number of pipets needed/robotic transfers is"
-                f" {pipets_needed}"
+                f"Total number of pipets needed/robotic transfers is {pipets_needed}"
             )
             logging.info(
                 f"{max_pgp_list} proguide(s) use the most material. Each"
@@ -534,6 +562,7 @@ def main():
                 f" {pgp_min} transfers and {4 * pgp_min} ul minimum in the"
                 " source plate"
             )
+            """
             zipobj = ZipFile("manual_cellgo.zip", "w")
             zipobj.write("manual_output.csv")
             zipobj.write("cellgo_stats.txt")
