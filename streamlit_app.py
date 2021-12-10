@@ -99,16 +99,6 @@ def main():
             type=["csv"],
         )
         uploaded_source = st.file_uploader("Choose a source file", type=["csv"])
-        with open("cellgo_stats.txt", "w"):
-            pass
-        logging.basicConfig(
-            filename="cellgo_stats.txt",
-            filemode="w",
-            format="%(message)s",
-            datefmt="%H:%M:%S",
-            level=logging.INFO,
-            force=True,
-        )
         if (uploaded_key is not None) & (uploaded_source is not None):
             mlprep_sites = [1, 2, 3, 4, 5, 6, 7, 8]
             plate_size = 96
@@ -251,7 +241,6 @@ def main():
             max_pgp_list = pgp_table[pgp_table == pgp_max].index.tolist()
             min_pgp_list = pgp_table[pgp_table == pgp_min].index.tolist()
             pipets_needed = len(df.index)
-
             with open("cellgo_stats.txt", "w"):
                 pass
             logging.basicConfig(
