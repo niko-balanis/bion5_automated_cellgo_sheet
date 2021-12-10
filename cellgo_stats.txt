@@ -1,7 +1,7 @@
-Number of unique cellgorithm steps is 6
-Number of proguides used is 13
-Number of unique targets is 9
-Number of unique cellgos|unique TargetWells is 72
-Total number of pipets needed/robotic transfers is 432
-['PGP014'] proguide(s) use the most material. Each proguide(s) requires 72 transfers and 288 ul minimum in the source plate (@ 4ul per transfer)
-['PGP002', 'PGP005', 'PGP009', 'PGP011', 'PGP004', 'PGP008'] proguide(s) use the least material require 24 transfers and 96 ul minimum in the source plate
+Max number of unique cellgorithm steps is 4
+Number of proguides used is 9
+Number of unique targets is 6
+Number of unique cellgos|unique TargetWells is 25
+Total number of pipets needed/robotic transfers is 84
+['PGP001', 'PGP002'] proguide(s) use the most material. Each proguide(s) requires 25 transfers and 100 ul minimum in the source plate (@ 4ul per transfer)
+['PGP011'] proguide(s) use the least material require 1 transfers and 4 ul minimum in the source plate
