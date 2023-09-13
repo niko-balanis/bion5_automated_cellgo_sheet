@@ -1,5 +1,6 @@
 import streamlit as st
-from streamlit import caching
+# from streamlit import caching
+from streamlit import runtime
 import pandas as pd
 import itertools
 import logging
@@ -537,5 +538,5 @@ def main():
 
 
 if __name__ == "__main__":
-    if st._is_running_with_streamlit:
+    if runtime.exists():
         main()
